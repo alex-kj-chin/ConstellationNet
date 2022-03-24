@@ -125,10 +125,10 @@ def main(config):
                 fs_dataset_train[0][0].shape, len(fs_dataset_train),
                 fs_dataset_train.n_classes))
 
-        fs_sampler = CategoriesSampler(
+        fs_train_sampler = CategoriesSampler(
                     fs_dataset_train.label, config['train_batches'],
                     n_train_way, n_train_shot + n_query, ep_per_batch=ep_per_batch)
-        fs_train_loader = DataLoader(fs_dataset_train, batch_sampler=fs_sampler,num_workers=args.num_workers)
+        fs_train_loader = DataLoader(fs_dataset_train, batch_sampler=fs_train_sampler,num_workers=args.num_workers)
 
     # few-shot val
     if config.get('fs_dataset_val'):
@@ -371,31 +371,31 @@ def main(config):
             write_log(f"Meta-Val Tasks: [{acc}, 0]", log_path)
 
             # GCML time
-            if waiting_for: # GCML Case
-                # Shots mode
-                if acc > best_val:
-                    best_val = acc
-                    iters_since_val_inc = 0
-                else:
-                    iters_since_val_inc += 1
-                    if waiting_for == "shots":
-                        if iters_since_val_inc > config["shots_patience"]:
-                            iters_since_val_inc = 0
-                            best_val = 0
-                            if n_train_shot > n_shot:
-                                n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
-                                fs_sampler.update_sample_size(n_train_shot + n_query)
-                            elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
-                                waiting_for = "ways"
-                    if waiting_for == "ways":
-                        if iters_since_val_inc > config["ways_patience"]:
-                            iters_since_val_inc = 0
-                            best_val = 0
-                            if n_train_way < conffig["ways_max"]:
-                                n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
-                                fs_sampler.change_ways(n_train_way)
-                            else:
-                                waiting_for = False
+            # if waiting_for: # GCML Case
+            #     # Shots mode
+            #     if acc > best_val:
+            #         best_val = acc
+            #         iters_since_val_inc = 0
+            #     else:
+            #         iters_since_val_inc += 1
+            #         if waiting_for == "shots":
+            #             if iters_since_val_inc > config["shots_patience"]:
+            #                 iters_since_val_inc = 0
+            #                 best_val = 0
+            #                 if n_train_shot > n_shot:
+            n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
+            fs_train_sampler.update_sample_size(n_train_shot + n_query)
+                    #         elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
+                    #             waiting_for = "ways"
+                    # if waiting_for == "ways":
+                    #     if iters_since_val_inc > config["ways_patience"]:
+                    #         iters_since_val_inc = 0
+                    #         best_val = 0
+                    #         if n_train_way < conffig["ways_max"]:
+            n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
+            fs_train_sampler.change_ways(n_train_way)
+                            # else:
+                            #     waiting_for = False
 
         ##########################################################################
         # Post process
