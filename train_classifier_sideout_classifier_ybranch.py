@@ -363,7 +363,8 @@ def main(config):
                 aves['f-va'].add(acc)
 
             # Log the FS training accuracy
-            write_log(f"{epoch},{iteration}Meta-Train Tasks: [{aves["f-ta"]}, 0]", log_path)
+            temp = aves["f-ta"]
+            write_log(f"{epoch},{iteration}Meta-Train Tasks: [{temp}, 0]", log_path)
 
             # Log the FS val accuracy
             acc = aves['f-va']
