@@ -35,7 +35,7 @@ class CategoriesSampler():
             yield batch.view(-1)
 
     def update_ways(self, new_ways):
-        print(f"updating ways from {self.cls} to {new_ways}")
+        print(f"updating ways from {self.n_cls} to {new_ways}")
         self.n_cls = new_ways
 
     def update_sample_size(self, new_per):
