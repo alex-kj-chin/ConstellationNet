@@ -393,7 +393,7 @@ def main(config):
                     #         best_val = 0
                     #         if n_train_way < conffig["ways_max"]:
             n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
-            fs_train_sampler.change_ways(n_train_way)
+            fs_train_sampler.update_ways(n_train_way)
                             # else:
                             #     waiting_for = False
 
