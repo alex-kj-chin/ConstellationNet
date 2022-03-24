@@ -363,11 +363,11 @@ def main(config):
                 aves['f-va'].add(acc)
 
             # Log the FS training accuracy
-            temp = aves["f-ta"]
+            temp = aves["f-ta"].item()
             write_log(f"{epoch},{iteration}Meta-Train Tasks: [{temp}, 0]", log_path)
 
             # Log the FS val accuracy
-            acc = aves['f-va']
+            acc = aves['f-va'].item()
             write_log(f"Meta-Val Tasks: [{acc}, 0]", log_path)
 
             # GCML time
