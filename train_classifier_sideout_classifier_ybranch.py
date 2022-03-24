@@ -22,10 +22,8 @@ from sync_batchnorm import convert_model
 
 # Logger
 def write_log(msg, fpath):
-    print(f"writing: {msg}")
     with open(fpath, "a") as f:
         f.write(str(msg) + "\n")
-    print(f"writing (acc or epoch) to file: {fpath}")
 
 def main(config):
     svname = config['name']
@@ -301,9 +299,6 @@ def main(config):
                     meta_loss_coeff = 1.0
                 loss_list.append(meta_loss_coeff * meta_loss)
 
-                # Log the FS training accuracy
-                write_log(f"{iteration}Meta-Train Tasks: [{meta_acc}, 0]", log_path)
-
                 # Record statistics.
                 aves['f-tl'].add(meta_loss.item())
                 aves['f-ta'].add(meta_acc)
@@ -364,40 +359,43 @@ def main(config):
                     loss = F.cross_entropy(logits, label)
                     acc = utils.compute_acc(logits, label)
 
-                    # Log the FS val accuracy
-                    write_log(f"Meta-Val Tasks: [{acc}, 0]", log_path)
-
-                    # GCML time
-                    if waiting_for: # GCML Case
-                        # Shots mode
-                        if acc > best_val:
-                            best_val = acc
-                            iters_since_val_inc = 0
-                        else:
-                            if waiting_for == "shots":
-                                iters_since_val_inc += 1
-                                if iters_since_val_inc > config["shots_patience"]:
-                                    iters_since_val_inc = 0
-                                    best_val = 0
-                                    if n_train_shot > n_shot:
-                                        n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
-                                        fs_sampler.update_sample_size(n_train_shot + n_query)
-                                    elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
-                                        waiting_for = "ways"
-                            if waiting_for == "ways":
-                                iters_since_val_inc += 1
-                                if iters_since_val_inc > config["ways_patience"]:
-                                    iters_since_val_inc = 0
-                                    best_val = 0
-                                    if n_train_way < conffig["ways_max"]:
-                                        n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
-                                        fs_sampler.change_ways(n_train_way)
-                                    else:
-                                        waiting_for = False
-
-
                 aves['f-vl'].add(loss.item())
                 aves['f-va'].add(acc)
+
+            # Log the FS training accuracy
+            write_log(f"{epoch},{iteration}Meta-Train Tasks: [{aves["f-ta"]}, 0]", log_path)
+
+            # Log the FS val accuracy
+            acc = aves['f-va']
+            write_log(f"Meta-Val Tasks: [{acc}, 0]", log_path)
+
+            # GCML time
+            if waiting_for: # GCML Case
+                # Shots mode
+                if acc > best_val:
+                    best_val = acc
+                    iters_since_val_inc = 0
+                else:
+                    if waiting_for == "shots":
+                        iters_since_val_inc += 1
+                        if iters_since_val_inc > config["shots_patience"]:
+                            iters_since_val_inc = 0
+                            best_val = 0
+                            if n_train_shot > n_shot:
+                                n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
+                                fs_sampler.update_sample_size(n_train_shot + n_query)
+                            elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
+                                waiting_for = "ways"
+                    if waiting_for == "ways":
+                        iters_since_val_inc += 1
+                        if iters_since_val_inc > config["ways_patience"]:
+                            iters_since_val_inc = 0
+                            best_val = 0
+                            if n_train_way < conffig["ways_max"]:
+                                n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
+                                fs_sampler.change_ways(n_train_way)
+                            else:
+                                waiting_for = False
 
         ##########################################################################
         # Post process
