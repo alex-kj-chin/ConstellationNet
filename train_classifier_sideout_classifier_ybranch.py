@@ -51,9 +51,9 @@ def main(config):
 
     # GCML Prep
     waiting_for = False
-    if config["ways_mode"] is not None and config["ways_mode"] == "patience":
+    if config.get("ways_mode") is not None and config["ways_mode"] == "patience":
         waiting_for = "ways"
-    if config["shots_mode"] is not None and config["shots_mode"] == "patience":
+    if config.get("shots_mode") is not None and config["shots_mode"] == "patience":
         waiting_for = "shots"
     if waiting_for:
         iters_since_val_inc = 0
@@ -382,7 +382,7 @@ def main(config):
                                     if n_train_shot > n_shot:
                                         n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
                                         fs_sampler.update_sample_size(n_train_shot + n_query)
-                                    elif config["ways_mode"] is not None and config["ways_mode"] == "patience": # we need to switch to ways
+                                    elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
                                         waiting_for = "ways"
                             if waiting_for == "ways":
                                 iters_since_val_inc += 1
