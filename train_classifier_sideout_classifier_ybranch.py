@@ -20,6 +20,13 @@ import sys
 sys.path.append('./Synchronized-BatchNorm-PyTorch')
 from sync_batchnorm import convert_model
 
+# Logger
+def write_log(msg, fpath):
+    print(f"writing: {msg}")
+    with open(fpath, "a") as f:
+        f.write(str(msg) + "\n")
+    print(f"writing (acc or epoch) to file: {fpath}")
+
 def main(config):
     svname = config['name']
     if svname is None:
@@ -39,6 +46,19 @@ def main(config):
     utils.log('class_total_loss_coeff: {}  meta_loss_coeff: {}'.format(
         config.get('class_total_loss_coeff'), config.get('meta_loss_coeff')))
 
+    # Logging file
+    log_path = os.path.join("logs", svname + ".txt")
+
+    # GCML Prep
+    waiting_for = False
+    if config["ways_mode"] is not None and config["ways_mode"] == "patience":
+        waiting_for = "ways"
+    if config["shots_mode"] is not None and config["shots_mode"] == "patience":
+        waiting_for = "shots"
+    if waiting_for:
+        iters_since_val_inc = 0
+        best_val = 0
+
     #### Dataset ####
     #### Few-Shot Dataset Info####
     n_way, n_shot = config['n_way'], config['n_shot']
@@ -56,9 +76,9 @@ def main(config):
         ep_per_batch = config['ep_per_batch']
     else:
         ep_per_batch = 1
-    
-    
-    
+
+
+
     #### Classification Dataset ####
     # train
     if config.get('train_dataset'):
@@ -74,9 +94,9 @@ def main(config):
 
     # val
     if config.get('val_dataset'):
-        
+
         if config.get('val_dataset') == 'cifar-fs':
-            
+
             val_dataset = datasets.make(config['val_dataset'], **config['val_dataset_args'])
             utils.log('val dataset (actually few-shot): {} (x{}), {}'.format(
                 val_dataset[0][0].shape, len(val_dataset),
@@ -86,8 +106,8 @@ def main(config):
                 val_dataset.label, 200,
                 n_way, n_shot + 15, ep_per_batch=4)
             val_loader = DataLoader(val_dataset, batch_sampler=fs_sampler)
-            
-        
+
+
         else:
             val_dataset = datasets.make(config['val_dataset'],
                                         **config['val_dataset_args'])
@@ -98,8 +118,8 @@ def main(config):
         if config.get('visualize_datasets'):
             utils.visualize_dataset(val_dataset, 'val_dataset', writer)
 
-  
-        
+
+
     # few-shot train
     if config.get('fs_dataset_train'):
         fs_dataset_train = datasets.make(config['fs_dataset_train'], **config['fs_dataset_train_args'])
@@ -126,9 +146,9 @@ def main(config):
 
     eval_val = eval_fs = False
     if config.get('eval_val') == True:
-        eval_val = True 
+        eval_val = True
     if config.get('eval_fs') == True:
-        eval_fs = True 
+        eval_fs = True
     ########
 
 
@@ -172,7 +192,7 @@ def main(config):
         raise ValueError()
 
     ########
-    
+
     max_epoch = config['max_epoch']
     save_epoch = config.get('save_epoch')
     max_va = 0.
@@ -182,16 +202,16 @@ def main(config):
         ckpt = torch.load(config['resume'])
         if config.get('_parallel'):
             model.load_state_dict(utils.sd_parallelize(ckpt['model_sd']))
-        else: 
+        else:
             model.load_state_dict(ckpt['model_sd'])
         optimizer.load_state_dict(ckpt['training']['optimizer_sd'])
         lr_scheduler.load_state_dict(ckpt['training']['lr_scheduler_sd'])
         cur_epoch = ckpt['training']['epoch'] + 1
-        
-    else: 
+
+    else:
         cur_epoch = 1
         print("No checkpoint loaded, training from scratch.")
-        
+
     for epoch in range(cur_epoch, max_epoch + 1 + 1):
         np.random.seed(epoch) # We need to set up a new seed every epoch.
 
@@ -209,7 +229,7 @@ def main(config):
 
         ##########################################################################
         # Train models
-        ########################################################################## 
+        ##########################################################################
         model.train()
         writer.add_scalar('lr', optimizer.param_groups[0]['lr'], epoch)
 
@@ -217,7 +237,7 @@ def main(config):
             class_iter = iter(train_loader)
         if config.get('fs_dataset_train'):
             meta_iter = iter(fs_train_loader)
-            
+
         added_aves_keys = False
         for iteration in range(config['train_batches']):
             # Fetch data
@@ -240,7 +260,7 @@ def main(config):
                 # Forward step.
                 class_data, class_label = class_data.cuda(), class_label.cuda()
                 class_logits, class_sideout_logits = model(mode='class', x=class_data)
-                
+
                 class_loss = F.cross_entropy(class_logits, class_label)
                 class_sideout_losses = {k:F.cross_entropy(v, class_label) for k, v in class_sideout_logits.items()}
                 if args.disable_loss:
@@ -262,11 +282,11 @@ def main(config):
                     aves['tl-loss'] = utils.Averager()
                     for k in class_sideout_losses:
                         aves['tl-{}'.format(k)] = utils.Averager()
-                
+
                 aves['tl-loss'].add(class_loss.item())
                 for k in class_sideout_losses:
                     aves['tl-{}'.format(k)].add(class_sideout_losses[k].item())
-            
+
             # Branch 2.
             if config.get('train_branch_2')  and config.get('fs_dataset_train'):
                 # Forward step.
@@ -281,8 +301,11 @@ def main(config):
                     meta_loss_coeff = 1.0
                 loss_list.append(meta_loss_coeff * meta_loss)
 
+                # Log the FS training accuracy
+                write_log(f"{iteration}Meta-Train Tasks: [{meta_acc}, 0]", log_path)
+
                 # Record statistics.
-                aves['f-tl'].add(meta_loss.item()) 
+                aves['f-tl'].add(meta_loss.item())
                 aves['f-ta'].add(meta_acc)
 
             # Gradient step.
@@ -299,7 +322,7 @@ def main(config):
 
         ##########################################################################
         # Evaluate models
-        ########################################################################## 
+        ##########################################################################
         if eval_val:
             model.eval()
             if config.get('val_dataset') == 'cifar-fs':
@@ -313,9 +336,9 @@ def main(config):
                         acc = utils.compute_acc(logits, label)
                     aves['vl'].add(loss.item())
                     aves['va'].add(acc)
-            
+
             else:
-            
+
                 for data, label in tqdm(val_loader, desc='val', leave=False):
                     # Forward step.
                     data, label = data.cuda(), label.cuda()
@@ -340,6 +363,39 @@ def main(config):
                     logits = model(mode='meta', x_shot=x_shot, x_query=x_query, branch=2).view(-1, n_way)
                     loss = F.cross_entropy(logits, label)
                     acc = utils.compute_acc(logits, label)
+
+                    # Log the FS val accuracy
+                    write_log(f"Meta-Val Tasks: [{acc}, 0]", log_path)
+
+                    # GCML time
+                    if waiting_for: # GCML Case
+                        # Shots mode
+                        if acc > best_val:
+                            best_val = acc
+                            iters_since_val_inc = 0
+                        else:
+                            if waiting_for == "shots":
+                                iters_since_val_inc += 1
+                                if iters_since_val_inc > args.shots_patience:
+                                    iters_since_val_inc = 0
+                                    best_val = 0
+                                    if args.train_shots > args.shot:
+                                        args.train_shots = max(args.shot, args.train_shots - args.shots_change)
+                                        fs_sampler.update_sample_size( + )
+                                    elif args.ways_mode is not None and args.ways_mode == "patience": # we need to switch to ways
+                                        waiting_for = "ways"
+                            if waiting_for == "ways":
+                                iters_since_val_inc += 1
+                                if iters_since_val_inc > args.ways_patience:
+                                    iters_since_val_inc = 0
+                                    best_val = 0
+                                    if args.train_ways < args.ways_max:
+                                        args.train_ways = min(args.ways_max, args.train_ways + args.ways_change)
+                                        fs_sampler.change_ways(args.train_ways)
+                                    else:
+                                        waiting_for = False
+
+
                 aves['f-vl'].add(loss.item())
                 aves['f-va'].add(acc)
 
@@ -456,6 +512,6 @@ if __name__ == '__main__':
 
     if args.train_batches > 0:
         config['train_batches'] = args.train_batches
-    config['resume'] = args.resume    
+    config['resume'] = args.resume
     utils.set_gpu(args.gpu)
     main(config)
