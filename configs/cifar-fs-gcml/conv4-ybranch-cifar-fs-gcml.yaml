@@ -1,4 +1,4 @@
-name: conv4-ybranch-cifar-fs
+name: conv4-ybranch-cifar-fs-gcml
 train_dataset: cifar-fs
 train_dataset_args: {split: train, aug: lee}
 val_dataset: cifar-fs
