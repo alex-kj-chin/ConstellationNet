@@ -9,6 +9,16 @@ fs_dataset_train_args: {split: train, aug: lee}
 fs_dataset_val: fc100
 fs_dataset_val_args: {split: val, aug: lee}
 
+# GCML
+shots_mode: patience
+shots_patience: 3
+shots_change: 3
+n_train_shot: 9
+ways_mode: patience
+ways_patience: 3
+ways_change: 1
+ways_max: 8
+n_train_way: 5
 
 model: classifier-sideout-class-meta
 model_args:
