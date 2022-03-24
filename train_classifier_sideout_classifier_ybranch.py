@@ -376,22 +376,22 @@ def main(config):
                         else:
                             if waiting_for == "shots":
                                 iters_since_val_inc += 1
-                                if iters_since_val_inc > args.shots_patience:
+                                if iters_since_val_inc > config["shots_patience"]:
                                     iters_since_val_inc = 0
                                     best_val = 0
-                                    if args.train_shots > args.shot:
-                                        args.train_shots = max(args.shot, args.train_shots - args.shots_change)
-                                        fs_sampler.update_sample_size( + )
-                                    elif args.ways_mode is not None and args.ways_mode == "patience": # we need to switch to ways
+                                    if n_train_shot > n_shot:
+                                        n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
+                                        fs_sampler.update_sample_size(n_train_shot + n_query)
+                                    elif config["ways_mode"] is not None and config["ways_mode"] == "patience": # we need to switch to ways
                                         waiting_for = "ways"
                             if waiting_for == "ways":
                                 iters_since_val_inc += 1
-                                if iters_since_val_inc > args.ways_patience:
+                                if iters_since_val_inc > config["ways_patience"]:
                                     iters_since_val_inc = 0
                                     best_val = 0
-                                    if args.train_ways < args.ways_max:
-                                        args.train_ways = min(args.ways_max, args.train_ways + args.ways_change)
-                                        fs_sampler.change_ways(args.train_ways)
+                                    if n_train_way < conffig["ways_max"]:
+                                        n_train_way = min(config["ways_max"], n_train_way + config["ways_change"])
+                                        fs_sampler.change_ways(n_train_way)
                                     else:
                                         waiting_for = False
 
