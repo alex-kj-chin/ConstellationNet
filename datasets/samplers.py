@@ -17,7 +17,7 @@ class CategoriesSampler():
 
     def __len__(self):
         return self.n_batch
-    
+
     def __iter__(self):
         for i_batch in range(self.n_batch):
             batch = []
@@ -34,3 +34,10 @@ class CategoriesSampler():
             batch = torch.stack(batch) # bs * n_cls * n_per
             yield batch.view(-1)
 
+    def update_ways(self, new_ways):
+        print(f"updating ways from {self.cls} to {new_ways}")
+        self.n_cls = new_ways
+
+    def update_sample_size(self, new_per):
+        print(f"updating sample size from {self.n_per} to {new_per}")
+        self.n_per = new_per

@@ -377,8 +377,8 @@ def main(config):
                     best_val = acc
                     iters_since_val_inc = 0
                 else:
+                    iters_since_val_inc += 1
                     if waiting_for == "shots":
-                        iters_since_val_inc += 1
                         if iters_since_val_inc > config["shots_patience"]:
                             iters_since_val_inc = 0
                             best_val = 0
@@ -388,7 +388,6 @@ def main(config):
                             elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
                                 waiting_for = "ways"
                     if waiting_for == "ways":
-                        iters_since_val_inc += 1
                         if iters_since_val_inc > config["ways_patience"]:
                             iters_since_val_inc = 0
                             best_val = 0
