@@ -382,8 +382,8 @@ def main(config):
                         if iters_since_val_inc > config["shots_patience"]:
                             iters_since_val_inc = 0
                             best_val = 0
-                            if n_train_shot > n_shot:
-                                n_train_shot = max(n_shot, n_train_shot - config["shots_change"])
+                            if n_train_shot > config["min_shots"]:
+                                n_train_shot = max(config["min_shots"], n_train_shot - config["shots_change"])
                                 fs_train_sampler.update_sample_size(n_train_shot + n_query)
                             elif config.get("ways_mode") is not None and config["ways_mode"] == "patience": # we need to switch to ways
                                 waiting_for = "ways"

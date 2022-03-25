@@ -12,8 +12,9 @@ fs_dataset_val_args: {split: val, aug: lee}
 # GCML
 shots_mode: patience
 shots_patience: 3
-shots_change: 3
-n_train_shot: 9
+shots_change: 2
+n_train_shot: 11
+min_shots: 7
 ways_mode: patience
 ways_patience: 3
 ways_change: 1
